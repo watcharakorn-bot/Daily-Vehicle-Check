@@ -316,6 +316,35 @@
   .usage-toggle button.active b{color:var(--amber-ink);}
 
   input.computed{background:#F4F6F4; color:var(--ink-soft); font-weight:700;}
+
+  /* ============ ดาวน์โหลดรายงานเป็นรูปภาพ ============ */
+  .toast{z-index:300 !important;}
+  .dl-landing{display:block; margin:16px auto 0; background:transparent; color:#DCE4E6; border:1.5px solid #6B7A82;
+    border-radius:10px; padding:10px 16px; font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer;}
+  .dl-landing:active{background:#33424A;}
+  .dl-after{background:#2F7D5B !important; margin-right:6px;}
+  .dl-overlay{position:fixed; inset:0; z-index:150; background:var(--bg); display:flex; flex-direction:column;
+    padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);}
+  .dl-sheet{display:flex; flex-direction:column; height:100%; width:100%;}
+  .dl-head{background:var(--dark); color:#fff; padding:14px 16px 12px; display:flex; flex-direction:column; gap:8px;}
+  .dl-body{flex:1 1 auto; overflow-y:auto; padding:16px; -webkit-overflow-scrolling:touch;}
+  .dl-lbl{display:block; font-size:12.5px; font-weight:700; color:var(--ink-soft); margin:12px 0 5px;}
+  .dl-in{width:100%; font:inherit; font-size:15px; padding:10px 12px; border:1.5px solid var(--line); border-radius:10px; background:#fff;}
+  .dl-types{display:flex; gap:8px; flex-wrap:wrap;}
+  .dl-type{flex:1; min-width:90px; border:1.5px solid var(--line); background:#fff; border-radius:10px; padding:9px 6px;
+    font:inherit; font-size:13px; font-weight:700; color:var(--ink-soft); cursor:pointer;}
+  .dl-type.on{border-color:var(--amber); background:#FDF6E9; color:var(--amber-ink);}
+  .dl-hint{font-size:12px; color:var(--ink-soft); margin-top:10px; line-height:1.5;}
+  .dl-go{display:inline-block; width:100%; margin-top:16px; background:var(--dark); color:#fff; border:none; border-radius:10px;
+    padding:13px; font:inherit; font-size:15px; font-weight:800; cursor:pointer; text-align:center; text-decoration:none;}
+  .dl-go:disabled{opacity:.6;}
+  .dl-status{margin-top:14px; font-size:13.5px; font-weight:700; color:var(--ink);}
+  .dl-meta{font-size:12.5px; color:var(--ink-soft); margin-bottom:10px; line-height:1.5; word-break:break-all;}
+  .dl-img{width:100%; display:block; border:1px solid var(--line); border-radius:6px; background:#fff;}
+  .dl-actions{display:flex; gap:8px;}
+  .dl-actions .dl-go{flex:1;}
+  .dl-share{margin-top:16px; background:#2F7D5B; color:#fff; border:none; border-radius:10px; padding:13px 18px;
+    font:inherit; font-size:15px; font-weight:800; cursor:pointer;}
 </style>
 </head>
 <body>
@@ -332,6 +361,7 @@
     <p class="landing-sub">เลือกประเภทรถที่ต้องการตรวจเช็ค</p>
     <div id="vehiclePicker" class="vpicker"></div>
     <div class="landing-foot">เลือกแล้วระบบจะเปิดแบบฟอร์มตรวจเช็คของรถประเภทนั้น</div>
+    <button type="button" class="dl-landing" id="dlLandingBtn">⬇ ดาวน์โหลดรายงาน (รูปภาพ)</button>
   </div>
 </div>
 
@@ -421,6 +451,7 @@
 
 <div class="submit-bar">
   <div class="summary">ตรวจแล้ว <b id="doneCount">0</b>/<b id="totalCount">0</b> รายการ</div>
+  <button type="button" id="dlBtn" class="dl-after" style="display:none;">⬇ รูปภาพ</button>
   <button type="button" id="submitBtn">Preview / ส่งรายงาน</button>
 </div>
 
@@ -443,6 +474,38 @@
     </div>
     <div class="preview-foot">
       <button type="button" id="previewConfirmBtn">ยืนยันส่งรายงาน</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ดาวน์โหลดรายงานเป็นรูปภาพ ============ -->
+<div id="dlOverlay" class="dl-overlay" style="display:none;">
+  <div class="dl-sheet">
+    <div class="dl-head">
+      <button type="button" id="dlCloseBtn" class="pv-back">‹ ปิด</button>
+      <div class="pv-title">ดาวน์โหลดรายงาน (รูปภาพ)</div>
+    </div>
+    <div class="dl-body">
+      <div id="dlForm">
+        <label class="dl-lbl">ประเภทรถ</label>
+        <div class="dl-types" id="dlTypes"></div>
+        <label class="dl-lbl">วันที่ตรวจ</label>
+        <input type="date" id="dlDate" class="dl-in">
+        <label class="dl-lbl">ทะเบียน / รหัสรถ</label>
+        <input type="text" id="dlVehicle" class="dl-in">
+        <div class="dl-hint">รายงานจะรวมทุกผลัดที่ส่งแล้วของวันและรถคันนี้</div>
+        <button type="button" id="dlGoBtn" class="dl-go">สร้างรูปภาพรายงาน</button>
+      </div>
+      <div id="dlStatus" class="dl-status"></div>
+      <div id="dlResult" style="display:none;">
+        <div class="dl-meta" id="dlMeta"></div>
+        <img id="dlImg" class="dl-img" alt="รายงาน">
+        <div class="dl-actions">
+          <a id="dlSave" class="dl-go" download>บันทึกรูปภาพ (PNG)</a>
+          <button type="button" id="dlShare" class="dl-share" style="display:none;">แชร์</button>
+        </div>
+        <div class="dl-hint">บน iPhone ถ้ากดบันทึกไม่ได้ ให้แตะค้างที่รูปแล้วเลือก "บันทึกในรูปภาพ"</div>
+      </div>
     </div>
   </div>
 </div>
@@ -640,6 +703,7 @@ function openForm(key){
   state.results = {}; state.notes = {}; state.extra = {}; state.meta = {};
   state.usage = ''; state.repairStatus = {}; state.repairTicket = {};
   pendingPayload = null;
+  document.getElementById('dlBtn').style.display = 'none';
 
   document.getElementById('formTitle').textContent = CFG.formTitle;
   document.getElementById('formCode').textContent = CFG.formCode;
@@ -1214,11 +1278,117 @@ document.getElementById('previewConfirmBtn').addEventListener('click', async ()=
     showToast('บันทึกข้อมูลเรียบร้อย เวลา ' + savedTimeStr, 'ok');
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true; submitBtn.textContent = 'ส่งแล้ว';
+    lastSubmitted = { type: CFG.key, date: pendingPayload.date, vehicle: pendingPayload.vehicleId };
+    document.getElementById('dlBtn').style.display = 'inline-block';
   }catch(e){
     showToast('ส่งข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง', 'bad');
   }finally{
     btn.disabled = false; btn.textContent = 'ยืนยันส่งรายงาน';
   }
+});
+
+
+/* ============ ดาวน์โหลดรายงานเป็นรูปภาพ PNG ============ */
+let lastSubmitted = null;
+let dlType = null;
+const PDFJS_VER = '3.11.174';
+
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return new Promise((resolve, reject)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VER + '/pdf.min.js';
+    s.onload = ()=>{
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/' + PDFJS_VER + '/pdf.worker.min.js';
+      resolve(window.pdfjsLib);
+    };
+    s.onerror = ()=> reject(new Error('โหลดตัวแปลงไฟล์ไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต'));
+    document.head.appendChild(s);
+  });
+}
+
+function openDl(preset){
+  const types = VEHICLE_TYPES.filter(t=>t.available);
+  dlType = (preset && preset.type) || (CFG && CFG.key) || types[0].key;
+  const box = document.getElementById('dlTypes'); box.innerHTML = '';
+  types.forEach(t=>{
+    const b = el('button', 'dl-type' + (t.key===dlType ? ' on' : ''), t.name); b.type = 'button';
+    b.addEventListener('click', ()=>{
+      dlType = t.key;
+      [...box.children].forEach(x=>x.classList.toggle('on', x===b));
+      document.getElementById('dlVehicle').value = t.defaultVehicle || '';
+    });
+    box.appendChild(b);
+  });
+  const vt = types.find(t=>t.key===dlType);
+  document.getElementById('dlDate').value = (preset && preset.date) || new Date().toISOString().slice(0,10);
+  document.getElementById('dlVehicle').value = (preset && preset.vehicle) || (vt ? vt.defaultVehicle : '');
+  document.getElementById('dlForm').style.display = 'block';
+  document.getElementById('dlResult').style.display = 'none';
+  document.getElementById('dlStatus').textContent = '';
+  document.getElementById('dlOverlay').style.display = 'flex';
+  if(preset && preset.auto) makeReportImage();
+}
+
+async function makeReportImage(){
+  const date = document.getElementById('dlDate').value;
+  const vehicle = document.getElementById('dlVehicle').value.trim();
+  const st = document.getElementById('dlStatus');
+  if(!date || !vehicle){ st.textContent = 'กรุณาเลือกวันที่และกรอกรหัสรถ'; return; }
+  if(!APPS_SCRIPT_URL || APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === 0){ st.textContent = 'ยังไม่ได้ตั้งค่า URL ของ Apps Script'; return; }
+  const go = document.getElementById('dlGoBtn');
+  go.disabled = true;
+  document.getElementById('dlResult').style.display = 'none';
+  try{
+    st.textContent = 'กำลังสร้างรายงานจาก Google Sheet... (ประมาณ 5–15 วินาที)';
+    const [res, pdfjs] = await Promise.all([
+      fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ action:'reportPdf', vehicleType: dlType, date: date, vehicleId: vehicle }) })
+        .then(r=>r.json()),
+      loadPdfJs()
+    ]);
+    if(!res.ok) throw new Error(res.error || 'สร้างรายงานไม่สำเร็จ');
+    st.textContent = 'กำลังแปลงเป็นรูปภาพ...';
+    const bin = atob(res.pdf); const bytes = new Uint8Array(bin.length);
+    for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    const doc = await pdfjs.getDocument({ data: bytes }).promise;
+    const page = await doc.getPage(1);
+    const vp = page.getViewport({ scale: 200/72 });           // ~200 dpi
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    const blob = await new Promise(r=>canvas.toBlob(r, 'image/png'));
+    const url = URL.createObjectURL(blob);
+    const fname = res.filename + '.png';
+    document.getElementById('dlImg').src = url;
+    const a = document.getElementById('dlSave'); a.href = url; a.download = fname;
+    document.getElementById('dlMeta').innerHTML = '<b>' + fname + '</b><br>ผลัดที่มีข้อมูล: ' + res.shifts.join(', ');
+    const shareBtn = document.getElementById('dlShare');
+    const file = new File([blob], fname, { type:'image/png' });
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      shareBtn.style.display = 'inline-block';
+      shareBtn.onclick = ()=> navigator.share({ files:[file], title: fname }).catch(()=>{});
+    } else { shareBtn.style.display = 'none'; }
+    document.getElementById('dlForm').style.display = 'none';
+    document.getElementById('dlResult').style.display = 'block';
+    st.textContent = '';
+  }catch(err){
+    st.textContent = 'ไม่สำเร็จ: ' + (err && err.message ? err.message : err);
+  }finally{
+    go.disabled = false;
+  }
+}
+
+document.getElementById('dlLandingBtn').addEventListener('click', ()=> openDl(null));
+document.getElementById('dlBtn').addEventListener('click', ()=>{
+  if(lastSubmitted) openDl({ type: lastSubmitted.type, date: lastSubmitted.date, vehicle: lastSubmitted.vehicle, auto: true });
+});
+document.getElementById('dlGoBtn').addEventListener('click', makeReportImage);
+document.getElementById('dlCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('dlOverlay').style.display = 'none';
 });
 
 document.getElementById('backBtn').addEventListener('click', backToLanding);
